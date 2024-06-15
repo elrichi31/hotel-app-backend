@@ -27,3 +27,4 @@ Route.get('/', async () => {
 Route.get('/posts', 'PostsController.index')
 Route.post('register', 'AuthController.register')
 Route.post('login', 'AuthController.login')
+Route.get('/api/user', 'UsersController.show').middleware('auth');
