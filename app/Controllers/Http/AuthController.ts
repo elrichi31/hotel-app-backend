@@ -34,4 +34,9 @@ export default class AuthController {
     const token = await auth.use('api').generate(user)
     return { token }
   }
+
+  public async logout({ auth, response }: HttpContextContract) {
+    await auth.use('api').logout()
+    return response.json({ message: 'Successfully logged out' })
+  }
 }
