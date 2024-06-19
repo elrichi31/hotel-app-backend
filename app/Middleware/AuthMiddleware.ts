@@ -6,6 +6,7 @@ export default class AuthMiddleware {
       await auth.authenticate();
       await next();
     } catch (error) {
+      console.log(error);
       return response.unauthorized({ message: 'Unauthorized' });
     }
   }

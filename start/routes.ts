@@ -30,3 +30,16 @@ Route.post('login', 'AuthController.login')
 Route.post('/logout', 'AuthController.logout').middleware('auth')
 Route.get('/api/user', 'UsersController.show').middleware('auth');
 
+Route.group(() => {
+  // Ruta para listar todos los clientes
+  Route.get('/clientes', 'ClientesController.index')
+  // Ruta para obtener un cliente específico
+  Route.get('/clientes/:id', 'ClientesController.show')
+  // Ruta para crear un nuevo cliente
+  Route.post('/clientes', 'ClientesController.store')
+  // Ruta para actualizar un cliente existente
+  Route.put('/clientes/:id', 'ClientesController.update')
+  // Ruta para borrar un cliente
+  Route.delete('/clientes/:id', 'ClientesController.destroy')
+}).middleware('auth')
+
