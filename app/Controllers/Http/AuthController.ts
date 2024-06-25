@@ -31,11 +31,14 @@ export default class AuthController {
       return response.unauthorized('Invalid credentials')
     }
 
-    const token = await auth.use('api').generate(user)
+    const token = await auth.use('api').generate(user, {
+      expiresIn: '180 mins'
+    })
     return { token }
   }
 
   public async logout({ auth, response }: HttpContextContract) {
+    await auth.use('api').revoke()
     await auth.use('api').logout()
     return response.json({ message: 'Successfully logged out' })
   }
