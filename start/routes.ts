@@ -36,6 +36,7 @@ Route.group(() => {
   Route.post('/clientes', 'ClientesController.store')
   Route.put('/clientes/:id', 'ClientesController.update')
   Route.delete('/clientes/:id', 'ClientesController.destroy')
+  Route.get('/clientes/cedula/:cedula', 'ClientesController.findByCedula')
 }).middleware('auth')
 
 Route.group(() => {

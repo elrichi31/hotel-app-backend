@@ -38,6 +38,16 @@ export default class ClienteController {
   public async destroy({ response, params }: HttpContextContract) {
     const cliente = await Cliente.findOrFail(params.id)
     await cliente.delete()
-    return response.status(200).json({ message: 'Cliente eliminado'})
+    return response.status(200).json({ message: 'Cliente eliminado' })
+  }
+
+  // Obtener un cliente por su número de cédula
+  public async findByCedula({ params, response }: HttpContextContract) {
+    try {
+      const cliente = await Cliente.findByOrFail('identificacion', params.cedula)
+      return response.status(200).json(cliente)
+    } catch (error) {
+      return response.status(404).json({ message: 'Cliente no encontrado' })
+    }
   }
 }

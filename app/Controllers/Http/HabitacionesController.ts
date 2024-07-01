@@ -20,14 +20,14 @@ export default class HabitacionController {
 
   // Crear una nueva habitación
   public async store({ request, response }: HttpContextContract) {
-    const data = request.only(['numero', 'tipo', 'precio', 'estado', 'descripcion', 'numeroCamas'])
+    const data = request.only(['numero', 'tipo', 'precio', 'estado', 'descripcion', 'numero_camas'])
     const habitacion = await Habitacion.create(data)
     return response.status(201).json(habitacion)
   }
 
   // Actualizar una habitación existente
   public async update({ request, response, params }: HttpContextContract) {
-    const data = request.only(['numero', 'tipo', 'precio', 'estado', 'descripcion', 'numeroCamas'])
+    const data = request.only(['numero', 'tipo', 'precio', 'estado', 'descripcion', 'numero_camas'])
     const habitacion = await Habitacion.findOrFail(params.id)
     habitacion.merge(data)
     await habitacion.save()

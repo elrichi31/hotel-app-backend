@@ -23,7 +23,7 @@ export default class Habitacion extends BaseModel {
   public descripcion: string
 
   @column()
-  public numeroCamas: number
+  public numero_camas: number
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   public createdAt: DateTime
