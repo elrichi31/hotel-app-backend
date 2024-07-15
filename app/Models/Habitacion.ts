@@ -1,8 +1,9 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column } from '@ioc:Adonis/Lucid/Orm'
+import { BaseModel, column, hasMany, HasMany } from '@ioc:Adonis/Lucid/Orm'
+import Precio from './Precio'
 
 export default class Habitacion extends BaseModel {
-  public static table = 'habitacion'
+  public static table = "habitacion"
 
   @column({ isPrimary: true })
   public id: number
@@ -14,18 +15,24 @@ export default class Habitacion extends BaseModel {
   public tipo: string
 
   @column()
-  public precio: number
-
-  @column()
   public estado: string
 
   @column()
   public descripcion: string
 
   @column()
-  public numero_camas: number
+  public numeroCamas: number
 
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  @column.dateTime()
+  public fechaInicioOcupacion: DateTime | null
+
+  @column.dateTime()
+  public fechaFinOcupacion: DateTime | null
+
+  @hasMany(() => Precio)
+  public precios: HasMany<typeof Precio>
+
+  @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
