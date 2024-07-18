@@ -1,44 +1,52 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, HasMany, hasMany } from '@ioc:Adonis/Lucid/Orm'
-import VentaHabitacion from './VentaHabitacion'
+import { BaseModel, column, manyToMany, ManyToMany } from '@ioc:Adonis/Lucid/Orm'
+import RegistroPersona from './RegistroPersona'
+import Habitacion from './Habitacion'
+import Precio from './Precio'
 
 export default class Venta extends BaseModel {
   @column({ isPrimary: true })
   public id: number
 
   @column()
-  public idCliente: number
+  public fechaInicio: Date
 
   @column()
-  public nombre: string
+  public fechaFin: Date
 
   @column()
-  public apellido: string
+  public descuento: number
 
   @column()
-  public cedula: string
-
-  @column()
-  public direccion: string
-
-  @column()
-  public telefono: string
+  public subtotal: number
 
   @column()
   public total: number
 
-  @column()
-  public numeroPersonas: number
+  @manyToMany(() => RegistroPersona, {
+    pivotTable: 'persona_venta',
+    pivotForeignKey: 'venta_id',
+    pivotRelatedForeignKey: 'persona_id',
+  })
+  public personas: ManyToMany<typeof RegistroPersona>
 
-  @column()
-  public metodoPago: string
+  @manyToMany(() => Habitacion, {
+    pivotTable: 'venta_habitacion_precio',
+    pivotForeignKey: 'venta_id',
+    pivotRelatedForeignKey: 'habitacion_id',
+  })
+  public habitaciones: ManyToMany<typeof Habitacion> 
 
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  @manyToMany(() => Precio, {
+    pivotTable: 'venta_habitacion_precio',
+    pivotForeignKey: 'venta_id',
+    pivotRelatedForeignKey: 'precio_id',
+  })
+  public precios: ManyToMany<typeof Precio>
+
+  @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   public updatedAt: DateTime
-
-  @hasMany(() => VentaHabitacion)
-  public habitaciones: HasMany<typeof VentaHabitacion>
 }

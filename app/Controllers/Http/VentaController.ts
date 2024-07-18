@@ -1,65 +1,135 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Venta from 'App/Models/Venta'
-import VentaHabitacion from 'App/Models/VentaHabitacion'
+import Habitacion from 'App/Models/Habitacion'
+import VentaHabitacionPrecio from 'App/Models/VentaHabitacionPrecio'
 
 export default class VentaController {
   public async index({ response }: HttpContextContract) {
-    const ventas = await Venta.query().preload('habitaciones')
-    return response.status(200).json(ventas)
-  }
-
-  // Obtener una venta específica
-  public async show({ params, response }: HttpContextContract) {
     try {
-      const venta = await Venta.query().where('id', params.id).preload('habitaciones').firstOrFail()
-      return response.status(200).json(venta)
+      const ventas = await Venta.query()
+        .preload('personas')
+        .preload('precios', (query) => {
+          query.preload('habitacion')
+        })
+      return response.json(ventas)
     } catch (error) {
-      return response.status(404).json({ message: 'Venta no encontrada' })
+      console.error('Error fetching ventas:', error)
+      return response.status(500).json({ message: 'Error fetching ventas', error })
     }
   }
 
-  // Crear una nueva venta con habitaciones
+  public async show({ params, response }: HttpContextContract) {
+    try {
+      const venta = await Venta.query()
+        .where('id', params.id)
+        .preload('personas')
+        .preload('precios', (query) => {
+          query.preload('habitacion')
+        })
+        .firstOrFail()
+      return response.json(venta)
+    } catch (error) {
+      console.error('Error fetching venta:', error)
+      return response.status(404).json({ message: 'Venta not found', error })
+    }
+  }
+
   public async store({ request, response }: HttpContextContract) {
-    const data = request.only([
-      'idCliente', 'nombre', 'apellido', 'cedula', 'direccion', 'telefono', 
-      'total', 'numeroPersonas', 'metodoPago'
-    ])
-    const habitacionIds = request.input('habitacionIds', [])
+    const { personas, habitaciones, precios, fecha_inicio, fecha_fin, descuento, subtotal, total } = request.only(['personas', 'habitaciones', 'precios', 'fecha_inicio', 'fecha_fin', 'descuento', 'subtotal', 'total'])
 
-    const venta = await Venta.create(data)
-    await venta.related('habitaciones').createMany(habitacionIds.map(habitacionId => ({
-      habitacionId
-    })))
+    try {
+      // Crear la venta
+      const venta = await Venta.create({
+        fechaInicio: fecha_inicio,
+        fechaFin: fecha_fin,
+        descuento,
+        subtotal,
+        total,
+      })
 
-    return response.status(201).json(venta)
+      // Asociar personas a la venta
+      await venta.related('personas').attach(personas)
+
+      // Asociar habitaciones y precios a la venta
+      for (const habitacionId of habitaciones) {
+        const precioId = precios[habitacionId]
+        await VentaHabitacionPrecio.create({
+          ventaId: venta.id,
+          habitacionId,
+          precioId,
+        })
+
+        // Actualizar la habitación con los rangos de fechas
+        const habitacion = await Habitacion.findOrFail(habitacionId)
+        habitacion.merge({
+          fechaInicioOcupacion: fecha_inicio,
+          fechaFinOcupacion: fecha_fin,
+          estado: 'Ocupado',
+        })
+        await habitacion.save()
+      }
+
+      return response.status(201).json(venta)
+    } catch (error) {
+      console.error('Error creating venta:', error)
+      return response.status(400).json({ message: 'Error creating venta', error })
+    }
   }
 
-  // Actualizar una venta existente
-  public async update({ request, response, params }: HttpContextContract) {
-    const data = request.only([
-      'idCliente', 'nombre', 'apellido', 'cedula', 'direccion', 'telefono', 
-      'total', 'numeroPersonas', 'metodoPago'
-    ])
-    const habitacionIds = request.input('habitacionIds', [])
+  public async update({ params, request, response }: HttpContextContract) {
+    const { personas, habitaciones, precios, fecha_inicio, fecha_fin, descuento, subtotal, total } = request.only(['personas', 'habitaciones', 'precios', 'fecha_inicio', 'fecha_fin', 'descuento', 'subtotal', 'total'])
 
-    const venta = await Venta.findOrFail(params.id)
-    venta.merge(data)
-    await venta.save()
+    try {
+      const venta = await Venta.findOrFail(params.id)
 
-    // Actualizar habitaciones asociadas
-    await VentaHabitacion.query().where('ventaId', venta.id).delete()
-    await venta.related('habitaciones').createMany(habitacionIds.map(habitacionId => ({
-      habitacionId
-    })))
+      // Actualizar la venta
+      venta.merge({
+        fechaInicio: fecha_inicio,
+        fechaFin: fecha_fin,
+        descuento,
+        subtotal,
+        total,
+      })
+      await venta.save()
 
-    return response.status(200).json(venta)
+      // Actualizar las relaciones de personas
+      await venta.related('personas').sync(personas)
+
+      // Actualizar las relaciones de habitaciones y precios
+      await VentaHabitacionPrecio.query().where('ventaId', venta.id).delete()
+      for (const habitacionId of habitaciones) {
+        const precioId = precios[habitacionId]
+        await VentaHabitacionPrecio.create({
+          ventaId: venta.id,
+          habitacionId,
+          precioId,
+        })
+
+        // Actualizar la habitación con los nuevos rangos de fechas
+        const habitacion = await Habitacion.findOrFail(habitacionId)
+        habitacion.merge({
+          fechaInicioOcupacion: fecha_inicio,
+          fechaFinOcupacion: fecha_fin,
+          estado: 'Ocupado',
+        })
+        await habitacion.save()
+      }
+
+      return response.json(venta)
+    } catch (error) {
+      console.error('Error updating venta:', error)
+      return response.status(400).json({ message: 'Error updating venta', error })
+    }
   }
 
-  // Borrar una venta
-  public async destroy({ response, params }: HttpContextContract) {
-    const venta = await Venta.findOrFail(params.id)
-    await venta.related('habitaciones').query().delete()
-    await venta.delete()
-    return response.status(204).json(null)
+  public async destroy({ params, response }: HttpContextContract) {
+    try {
+      const venta = await Venta.findOrFail(params.id)
+      await venta.delete()
+      return response.status(204).json(null)
+    } catch (error) {
+      console.error('Error deleting venta:', error)
+      return response.status(400).json({ message: 'Error deleting venta', error })
+    }
   }
 }

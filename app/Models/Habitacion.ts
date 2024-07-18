@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, hasMany, HasMany } from '@ioc:Adonis/Lucid/Orm'
 import Precio from './Precio'
-
 export default class Habitacion extends BaseModel {
   public static table = "habitacion"
 

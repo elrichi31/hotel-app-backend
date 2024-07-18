@@ -48,18 +48,18 @@ Route.group(() => {
 }).middleware('auth')
 
 Route.group(() => {
-  Route.get('/ventas', 'VentaController.index')
-  Route.get('/ventas/:id', 'VentaController.show')
-  Route.post('/ventas', 'VentaController.store')
-  Route.put('/ventas/:id', 'VentaController.update')
-  Route.delete('/ventas/:id', 'VentaController.destroy')
-}).middleware('auth')
-
-Route.group(() => {
   Route.get('personas', 'RegistroPersonasController.index')
   Route.post('personas', 'RegistroPersonasController.store')
   Route.get('personas/:id', 'RegistroPersonasController.show')
   Route.put('personas/:id', 'RegistroPersonasController.update')
   Route.delete('personas/:id', 'RegistroPersonasController.destroy')
   Route.get('personas/validate/:cedula', 'RegistroPersonasController.validateCedula') // Nueva ruta
+}).middleware('auth')
+
+Route.group(() => {
+  Route.post('ventas', 'VentaController.store')
+  Route.get('ventas', 'VentaController.index')
+  Route.get('ventas/:id', 'VentaController.show')
+  Route.put('ventas/:id', 'VentaController.update')
+  Route.delete('ventas/:id', 'VentaController.destroy')
 }).middleware('auth')
