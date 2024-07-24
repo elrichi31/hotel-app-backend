@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node ace serve --watch",
+    "dev": "node ace serve --watch & node ace scheduler:run",
     "build": "node ace build --production",
     "start": "node server.js",
     "test": "node ace test"
@@ -25,6 +25,7 @@
     "@adonisjs/core": "^5.9.0",
     "@adonisjs/lucid": "^18.4.0",
     "@adonisjs/repl": "^3.1.11",
+    "adonis5-scheduler": "^2.1.1",
     "luxon": "^3.4.4",
     "mysql2": "^3.10.0",
     "proxy-addr": "^2.0.7",
