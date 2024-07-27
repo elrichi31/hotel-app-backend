@@ -8,11 +8,11 @@ export default class Venta extends BaseModel {
   @column({ isPrimary: true })
   public id: number
 
-  @column()
-  public fechaInicio: Date
+  @column.dateTime()
+  public fechaInicio: DateTime
 
-  @column()
-  public fechaFin: Date
+  @column.dateTime()
+  public fechaFin: DateTime
 
   @column()
   public descuento: number
