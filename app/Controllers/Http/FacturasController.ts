@@ -2,46 +2,102 @@ import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Factura from 'App/Models/Factura'
 import Venta from 'App/Models/Venta'
 
-export default class FacturaController {
+export default class FacturasController {
+  
+  // Obtener todas las facturas
   public async index({ response }: HttpContextContract) {
     try {
       const facturas = await Factura.query().preload('venta')
-      return response.json(facturas)
+      return response.status(200).json(facturas)
     } catch (error) {
       console.error('Error fetching facturas:', error)
       return response.status(500).json({ message: 'Error fetching facturas', error })
     }
   }
 
+  // Obtener una factura por ID
   public async show({ params, response }: HttpContextContract) {
     try {
       const factura = await Factura.query()
         .where('id', params.id)
         .preload('venta')
         .firstOrFail()
-      return response.json(factura)
+      return response.status(200).json(factura)
     } catch (error) {
       console.error('Error fetching factura:', error)
       return response.status(404).json({ message: 'Factura not found', error })
     }
   }
 
+  // Crear una nueva factura
   public async store({ request, response }: HttpContextContract) {
-    const { tipo_documento, nombre, apellido, direccion, telefono, correo, venta_id } = request.only(['tipo_documento', 'nombre', 'apellido', 'direccion', 'telefono', 'correo', 'venta_id'])
+    const { 
+      nombre, 
+      apellido,
+      identificacion, 
+      direccion, 
+      telefono, 
+      correo, 
+      numero_factura, 
+      fecha_emision, 
+      descripcion, 
+      cantidad, 
+      precio_unitario, 
+      subtotal, 
+      descuento, 
+      iva, 
+      otros_impuestos, 
+      total, 
+      forma_pago, 
+      observaciones, 
+      venta_id // Aquí incluimos el ID de la venta
+    } = request.only([
+      'nombre', 
+      'apellido',
+      'identificacion', 
+      'direccion', 
+      'telefono', 
+      'correo', 
+      'numero_factura', 
+      'fecha_emision', 
+      'descripcion', 
+      'cantidad', 
+      'precio_unitario', 
+      'subtotal', 
+      'descuento', 
+      'iva', 
+      'otros_impuestos', 
+      'total', 
+      'forma_pago', 
+      'observaciones', 
+      'venta_id' // Este es el ID de la venta asociado
+    ])
 
     try {
       // Verificar si la venta existe
       await Venta.findOrFail(venta_id)
 
-      // Crear la factura
+      // Crear la factura vinculada a la venta
       const factura = await Factura.create({
-        tipo_documento,
         nombre,
         apellido,
+        identificacion,
         direccion,
         telefono,
         correo,
-        venta_id
+        numero_factura,
+        fecha_emision,
+        descripcion,
+        cantidad,
+        precio_unitario,
+        subtotal,
+        descuento,
+        iva,
+        otros_impuestos,
+        total,
+        forma_pago,
+        observaciones,
+        ventaId: venta_id // Asignar el ID de la venta
       })
 
       return response.status(201).json(factura)
@@ -51,8 +107,49 @@ export default class FacturaController {
     }
   }
 
+  // Actualizar una factura existente
   public async update({ params, request, response }: HttpContextContract) {
-    const { tipo_documento, nombre, apellido, direccion, telefono, correo, venta_id } = request.only(['tipo_documento', 'nombre', 'apellido', 'direccion', 'telefono', 'correo', 'venta_id'])
+    const { 
+      nombre, 
+      apellido,
+      identificacion, 
+      direccion, 
+      telefono, 
+      correo, 
+      numero_factura, 
+      fecha_emision, 
+      descripcion, 
+      cantidad, 
+      precio_unitario, 
+      subtotal, 
+      descuento, 
+      iva, 
+      otros_impuestos, 
+      total, 
+      forma_pago, 
+      observaciones, 
+      venta_id 
+    } = request.only([
+      'nombre', 
+      'apellido',
+      'identificacion', 
+      'direccion', 
+      'telefono', 
+      'correo', 
+      'numero_factura', 
+      'fecha_emision', 
+      'descripcion', 
+      'cantidad', 
+      'precio_unitario', 
+      'subtotal', 
+      'descuento', 
+      'iva', 
+      'otros_impuestos', 
+      'total', 
+      'forma_pago', 
+      'observaciones', 
+      'venta_id'
+    ])
 
     try {
       const factura = await Factura.findOrFail(params.id)
@@ -62,23 +159,37 @@ export default class FacturaController {
 
       // Actualizar la factura
       factura.merge({
-        tipo_documento,
         nombre,
         apellido,
+        identificacion,
         direccion,
         telefono,
         correo,
-        venta_id
+        numero_factura,
+        fecha_emision,
+        descripcion,
+        cantidad,
+        precio_unitario,
+        subtotal,
+        descuento,
+        iva,
+        otros_impuestos,
+        total,
+        forma_pago,
+        observaciones,
+        ventaId: venta_id // Asegurar que la factura sigue vinculada a una venta
       })
+
       await factura.save()
 
-      return response.json(factura)
+      return response.status(200).json(factura)
     } catch (error) {
       console.error('Error updating factura:', error)
       return response.status(400).json({ message: 'Error updating factura', error })
     }
   }
 
+  // Eliminar una factura
   public async destroy({ params, response }: HttpContextContract) {
     try {
       const factura = await Factura.findOrFail(params.id)
@@ -87,6 +198,18 @@ export default class FacturaController {
     } catch (error) {
       console.error('Error deleting factura:', error)
       return response.status(400).json({ message: 'Error deleting factura', error })
+    }
+  }
+
+  // Obtener todas las facturas asociadas a una venta
+  public async getFacturasByVenta({ params, response }: HttpContextContract) {
+    try {
+      const facturas = await Factura.query()
+        .where('venta_id', params.id)
+      return response.status(200).json(facturas)
+    } catch (error) {
+      console.error('Error fetching facturas:', error)
+      return response.status(400).json({ message: 'Error fetching facturas', error })
     }
   }
 }

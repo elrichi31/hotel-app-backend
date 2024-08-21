@@ -63,3 +63,12 @@ Route.group(() => {
   Route.put('ventas/:id', 'VentaController.update')
   Route.delete('ventas/:id', 'VentaController.destroy')
 }).middleware('auth')
+
+Route.group(() => {
+  Route.post('facturas', 'FacturasController.store')
+  Route.get('facturas', 'FacturasController.index')
+  Route.get('facturas/:id', 'FacturasController.show')
+  Route.put('facturas/:id', 'FacturasController.update')
+  Route.delete('facturas/:id', 'FacturasController.destroy')
+  Route.get('/facturas/venta/:id', 'FacturasController.getFacturasByVenta')
+}).middleware('auth')
