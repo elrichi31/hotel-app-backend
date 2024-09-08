@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, BelongsTo, belongsTo } from '@ioc:Adonis/Lucid/Orm'
+import { BaseModel, column, BelongsTo, belongsTo, hasMany, HasMany } from '@ioc:Adonis/Lucid/Orm'
 import Venta from 'App/Models/Venta'
+import Producto from 'App/Models/Producto'
 
 export default class Factura extends BaseModel {
   @column({ isPrimary: true })
@@ -31,25 +32,10 @@ export default class Factura extends BaseModel {
   public fecha_emision: DateTime
 
   @column()
-  public descripcion: string
-
-  @column()
-  public cantidad: number
-
-  @column()
-  public precio_unitario: number
-
-  @column()
   public subtotal: number
 
   @column()
   public descuento: number
-
-  @column()
-  public iva: number
-
-  @column()
-  public otros_impuestos: number
 
   @column()
   public total: number
@@ -61,10 +47,17 @@ export default class Factura extends BaseModel {
   public observaciones?: string
 
   @column()
+  public estado: 'guardado' | 'emitido' | 'anulado'
+
+  @column()
   public ventaId: number
   
   @belongsTo(() => Venta)
   public venta: BelongsTo<typeof Venta>
+
+  @hasMany(() => Producto)
+  public productos: HasMany<typeof Producto>
+
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime

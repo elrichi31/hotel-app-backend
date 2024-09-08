@@ -8,6 +8,7 @@ export default class VentaController {
     try {
       const ventas = await Venta.query()
         .preload('personas')
+        .preload('facturas')
         .preload('precios', (query) => {
           query.preload('habitacion')
         })
