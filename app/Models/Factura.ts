@@ -12,7 +12,7 @@ export default class Factura extends BaseModel {
 
   @column()
   public apellido: string
-  
+
   @column()
   public identificacion: string
 
@@ -31,13 +31,25 @@ export default class Factura extends BaseModel {
   @column.dateTime()
   public fecha_emision: DateTime
 
-  @column()
+  @column({
+    serializeAs: 'subtotal',
+    prepare: (value: any) => parseFloat(value),
+    serialize: (value: any) => parseFloat(value),
+  })
   public subtotal: number
 
-  @column()
+  @column({
+    serializeAs: 'descuento',
+    prepare: (value: any) => parseFloat(value),
+    serialize: (value: any) => parseFloat(value),
+  })
   public descuento: number
 
-  @column()
+  @column({
+    serializeAs: 'total',
+    prepare: (value: any) => parseFloat(value),
+    serialize: (value: any) => parseFloat(value),
+  })
   public total: number
 
   @column()
@@ -51,7 +63,7 @@ export default class Factura extends BaseModel {
 
   @column()
   public ventaId: number
-  
+
   @belongsTo(() => Venta)
   public venta: BelongsTo<typeof Venta>
 

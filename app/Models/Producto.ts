@@ -12,7 +12,11 @@ export default class Producto extends BaseModel {
   @column()
   public descripcion: string
 
-  @column()
+  @column({
+    serializeAs: 'precio_unitario',
+    prepare: (value: any) => parseFloat(value),
+    serialize: (value: any) => parseFloat(value),
+  })
   public precio_unitario: number
 
   @column()
