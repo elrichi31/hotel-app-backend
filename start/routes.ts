@@ -72,3 +72,12 @@ Route.group(() => {
   Route.delete('facturas/:id', 'FacturasController.destroy')
   Route.get('/facturas/venta/:id', 'FacturasController.getFacturasByVenta')
 }).middleware('auth')
+
+Route.group(() => {
+  Route.get('/reservas', 'ReservasController.index').middleware('auth')        // Obtener todas las reservas
+  Route.get('/reservas/:id', 'ReservasController.show').middleware('auth')        // Obtener una reserva por su ID
+  Route.post('/reservas', 'ReservasController.store')        // Crear una nueva reserva
+  Route.put('/reservas/:id', 'ReservasController.update').middleware('auth')       // Actualizar una reserva existente
+  Route.delete('/reservas/:id', 'ReservasController.destroy').middleware('auth')    // Eliminar una reserva
+  Route.post('/reservas/disponible', 'ReservasController.availableRooms')
+})
