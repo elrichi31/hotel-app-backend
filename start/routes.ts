@@ -24,11 +24,23 @@ Route.get('/', async () => {
   return { hello: 'world' }
 })
 
+Route.post('/password/forgot', 'UsersController.requestPasswordReset')
+Route.post('/password/reset', 'UsersController.resetPassword')
+
 Route.get('/posts', 'PostsController.index')
 Route.post('/register', 'AuthController.register')
 Route.post('/login', 'AuthController.login')
 Route.post('/logout', 'AuthController.logout').middleware('auth')
 Route.get('/api/user', 'UsersController.show').middleware('auth');
+
+Route.group(() => {
+  Route.get('/user', 'UsersController.show');
+  Route.get('/users', 'UsersController.index');
+  Route.get('/users/:id', 'UsersController.getUser');
+  Route.post('/users', 'UsersController.create');
+  Route.put('/users/:id', 'UsersController.update');
+  Route.delete('/users/:id', 'UsersController.delete');
+}).middleware(['auth', 'role:admin']);
 
 Route.group(() => {
   Route.get('/clientes', 'ClientesController.index')
@@ -37,7 +49,7 @@ Route.group(() => {
   Route.put('/clientes/:id', 'ClientesController.update')
   Route.delete('/clientes/:id', 'ClientesController.destroy')
   Route.get('/clientes/cedula/:cedula', 'ClientesController.findByCedula')
-}).middleware('auth')
+}).middleware(['auth', 'status'])
 
 Route.group(() => {
   Route.get('/habitaciones', 'HabitacionesController.index')
@@ -54,7 +66,7 @@ Route.group(() => {
   Route.put('personas/:id', 'RegistroPersonasController.update')
   Route.delete('personas/:id', 'RegistroPersonasController.destroy')
   Route.get('personas/validate/:cedula', 'RegistroPersonasController.validateCedula') // Nueva ruta
-}).middleware('auth')
+}).middleware(['auth'])
 
 Route.group(() => {
   Route.post('ventas', 'VentaController.store')

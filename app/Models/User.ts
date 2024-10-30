@@ -21,6 +21,12 @@ export default class User extends BaseModel {
   @column({ serializeAs: null })
   public password: string
 
+  @column()
+  public role: string; // Campo de rol (admin o empleado)
+
+  @column()
+  public status: string; // Campo de estado (activo o inactivo)
+
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
 
