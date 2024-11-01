@@ -101,26 +101,19 @@ export default class UsersController {
           <li><strong>Nombre de usuario:</strong> ${username}</li>
           <li><strong>Contraseña temporal:</strong> ${temporaryPassword}</li>
         </ul>
-        <p>Por razones de seguridad, te recomendamos que cambies tu contraseña después de iniciar sesión. Puedes hacerlo desde la sección de inicio de sesion en olvide mi contraseña e ingresa tu correo</p>
+        <p>Por razones de seguridad, te recomendamos que cambies tu contraseña después de iniciar sesión. Puedes hacerlo desde la sección de inicio de sesion en olvide mi contraseña, en ese apartado deberas ingrar el correo que le proporcionaste al administrador</p>
         <p>Si tienes alguna duda, no dudes en contactarnos.</p>
         <p>Saludos,<br>El equipo de soporte</p>
       `;
 
-      // Log de la información del correo
-      console.log('Email a enviar:', {
-        to: email,
-        subject: 'Credenciales de acceso a la plataforma',
-        html: emailContent,
-      });
-
       // Enviar las credenciales por correo electrónico al usuario
-      // await Mail.send((message) => {
-      //   message
-      //     .from('no-reply@example.com')
-      //     .to(email)
-      //     .subject('Credenciales de acceso a la plataforma')
-      //     .html(emailContent);
-      // });
+      await Mail.send((message) => {
+        message
+          .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
+          .to(email)
+          .subject('Credenciales de acceso a la plataforma')
+          .html(emailContent);
+      });
 
       // Responder con el usuario creado (excluyendo la contraseña)
       return response.status(201).json({
@@ -226,20 +219,20 @@ export default class UsersController {
     console.log(resetLink)
 
     // Enviar correo electrónico con el enlace de reseteo de contraseña
-    // await Mail.send((message) => {
-    //   message
-    //     .from(`${process.env.MAILGUN_DOMAIN}`)
-    //     .to("lisoc65869@rowplant.com")
-    //     .subject('Solicitud de Reseteo de Contraseña')
-    //     .html(`
-    //       <h1>Solicitud de Reseteo de Contraseña</h1>
-    //       <p>Hola ${user.firstName},</p>
-    //       <p>Recibimos una solicitud para restablecer tu contraseña. Haz clic en el enlace a continuación para restablecerla:</p>
-    //       <p><a href="${resetLink}">Resetear mi contraseña</a></p>
-    //       <p>Si no solicitaste este reseteo, puedes ignorar este correo.</p>
-    //       <p>Saludos,<br>El equipo de soporte</p>
-    //     `)
-    // })
+    await Mail.send((message) => {
+      message
+        .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
+        .to(email)
+        .subject('Solicitud de Reseteo de Contraseña')
+        .html(`
+          <h1>Solicitud de Reseteo de Contraseña</h1>
+          <p>Hola ${user.firstName},</p>
+          <p>Recibimos una solicitud para restablecer tu contraseña. Haz clic en el enlace a continuación para restablecerla:</p>
+          <p><a href="${resetLink}">Resetear mi contraseña</a></p>
+          <p>Si no solicitaste este reseteo, puedes ignorar este correo.</p>
+          <p>Saludos,<br>El equipo de soporte</p>
+        `)
+    })
 
     return response.json({ message: 'Password reset link sent' })
   }
