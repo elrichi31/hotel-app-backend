@@ -25,8 +25,8 @@ export default class AuthController {
 
     await Mail.send((message) => {
       message
-        .from('mailgun@sandbox9ebf31a24dc2486f9ba1d94acf450cf3.mailgun.org')
-        .to(email)
+      .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
+      .to(email)
         .subject('Welcome Onboard!')
         .html(`
           <h1>Bienvenido a Nuestra Plataforma</h1>
