@@ -25,9 +25,6 @@ export default class Factura extends BaseModel {
   @column()
   public correo: string
 
-  @column()
-  public numero_factura: string
-
   @column.dateTime()
   public fecha_emision: DateTime
 

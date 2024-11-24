@@ -92,4 +92,5 @@ Route.group(() => {
   Route.put('/reservas/:id', 'ReservasController.update').middleware('auth')       // Actualizar una reserva existente
   Route.delete('/reservas/:id', 'ReservasController.destroy').middleware('auth')    // Eliminar una reserva
   Route.post('/reservas/disponible', 'ReservasController.availableRooms')
+  Route.get('/confirm-reserva/:id', 'ReservasController.confirmReserva') // Confirmar reserva
 })

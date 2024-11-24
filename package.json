@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node ace serve --watch & node ace scheduler:run",
-    "build": "node ace build --production",
+    "build": "node ace build --production & node ace scheduler:run & node ace db:seed",
     "start": "node server.js",
     "test": "node ace test"
   },

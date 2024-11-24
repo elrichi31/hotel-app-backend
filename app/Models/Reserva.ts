@@ -13,6 +13,9 @@ export default class Reserva extends BaseModel {
   public apellido: string
 
   @column()
+  public email: string
+
+  @column()
   public fecha_inicio: Date
 
   @column()
