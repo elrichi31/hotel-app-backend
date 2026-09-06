@@ -2,6 +2,7 @@ import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import User from 'App/Models/User'
 import Hash from '@ioc:Adonis/Core/Hash'
 import Mail from '@ioc:Adonis/Addons/Mail'
+import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 
 export default class AuthController {
   public async register ({ request, response }: HttpContextContract) {
@@ -23,17 +24,23 @@ export default class AuthController {
     user.status = status
     await user.save()
 
+    const html = await renderEmailTemplate({
+      title: 'Bienvenido',
+      preheader: 'Tu cuenta ha sido creada exitosamente.',
+      bodyHtml: `
+        <h2 style="margin:0 0 12px 0; font-size:19px;">¡Bienvenido!</h2>
+        <p style="margin:0 0 12px 0;">Hola ${firstName},</p>
+        <p style="margin:0 0 12px 0;">Gracias por unirte a nuestra comunidad. Estamos encantados de tenerte a bordo.</p>
+        <p style="margin:24px 0 0 0;">Saludos,<br>El equipo de soporte</p>
+      `,
+    })
+
     await Mail.send((message) => {
       message
       .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
       .to(email)
         .subject('Welcome Onboard!')
-        .html(`
-          <h1>Bienvenido a Nuestra Plataforma</h1>
-          <p>Hola ${firstName},</p>
-          <p>Gracias por unirte a nuestra comunidad. Estamos encantados de tenerte a bordo.</p>
-          <p>Saludos,<br>El equipo de soporte</p>
-        `)
+        .html(html)
     })
 
     return response.created({ user })

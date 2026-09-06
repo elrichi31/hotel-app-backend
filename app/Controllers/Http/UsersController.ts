@@ -5,6 +5,7 @@ import PasswordReset from 'App/Models/PasswordReset';
 import { DateTime } from 'luxon';
 import Mail from '@ioc:Adonis/Addons/Mail'
 import { v4 as uuidv4 } from 'uuid'
+import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 
 export default class UsersController {
   // Método para mostrar el usuario autenticado
@@ -27,7 +28,7 @@ export default class UsersController {
       }
 
       // Obtener todos los usuarios excluyendo el campo 'password'
-      const users = await User.query().select('id', 'first_name', 'last_name', 'username', 'email', 'role', 'status');
+      const users = await User.query().select('id', 'first_name', 'last_name', 'username', 'email', 'role', 'status', 'notificar_reservas');
       return response.json(users);
     } catch (error) {
       return response.status(401).json({ message: 'Unauthorized' });
@@ -44,7 +45,7 @@ export default class UsersController {
       }
 
       const userId = params.id;
-      const foundUser = await User.query().where('id', userId).select('id', 'first_name', 'last_name', 'username', 'email', 'role', 'status').first();
+      const foundUser = await User.query().where('id', userId).select('id', 'first_name', 'last_name', 'username', 'email', 'role', 'status', 'notificar_reservas').first();
 
       if (!foundUser) {
         return response.status(404).json({ message: 'User not found' });
@@ -67,13 +68,14 @@ export default class UsersController {
       }
 
       // Obtención de los datos del nuevo usuario
-      const { first_name, last_name, username, email, role, status } = request.only([
+      const { first_name, last_name, username, email, role, status, notificar_reservas } = request.only([
         'first_name',
         'last_name',
         'username',
         'email',
         'role',
         'status',
+        'notificar_reservas',
       ]);
 
       // Generar una contraseña temporal
@@ -88,23 +90,34 @@ export default class UsersController {
       newUser.password = temporaryPassword;
       newUser.role = role;
       newUser.status = status;
+      newUser.notificarReservas = !!notificar_reservas;
 
       // Guardar el usuario en la base de datos
       await newUser.save();
 
       // Preparar la información del correo
-      const emailContent = `
-        <h1>Bienvenido a la Plataforma</h1>
-        <p>Hola ${first_name} ${last_name},</p>
-        <p>Se ha creado una cuenta para ti en nuestra plataforma. A continuación, encontrarás tus credenciales de acceso:</p>
-        <ul>
-          <li><strong>Nombre de usuario:</strong> ${username}</li>
-          <li><strong>Contraseña temporal:</strong> ${temporaryPassword}</li>
-        </ul>
-        <p>Por razones de seguridad, te recomendamos que cambies tu contraseña después de iniciar sesión. Puedes hacerlo desde la sección de inicio de sesion en olvide mi contraseña, en ese apartado deberas ingrar el correo que le proporcionaste al administrador</p>
-        <p>Si tienes alguna duda, no dudes en contactarnos.</p>
-        <p>Saludos,<br>El equipo de soporte</p>
-      `;
+      const html = await renderEmailTemplate({
+        title: 'Credenciales de acceso',
+        preheader: 'Se ha creado una cuenta para ti.',
+        bodyHtml: `
+          <h2 style="margin:0 0 12px 0; font-size:19px;">Bienvenido a la plataforma</h2>
+          <p style="margin:0 0 12px 0;">Hola ${first_name} ${last_name},</p>
+          <p style="margin:0 0 12px 0;">Se ha creado una cuenta para ti en nuestra plataforma. A continuación, encontrarás tus credenciales de acceso:</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin:16px 0; border-collapse:collapse;">
+            <tr>
+              <td style="padding:10px 14px; background-color:#f6f7f9; border-radius:8px 8px 0 0; font-size:13.5px; color:#5c6169;">Nombre de usuario</td>
+              <td style="padding:10px 14px; background-color:#f6f7f9; border-radius:8px 8px 0 0; font-size:13.5px; font-weight:600; text-align:right;">${username}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px; background-color:#f6f7f9; border-radius:0 0 8px 8px; font-size:13.5px; color:#5c6169;">Contraseña temporal</td>
+              <td style="padding:10px 14px; background-color:#f6f7f9; border-radius:0 0 8px 8px; font-size:13.5px; font-weight:600; text-align:right; font-family: 'Courier New', monospace;">${temporaryPassword}</td>
+            </tr>
+          </table>
+          <p style="margin:0 0 12px 0;">Por razones de seguridad, te recomendamos que cambies tu contraseña después de iniciar sesión. Puedes hacerlo desde la sección de inicio de sesión, en "Olvidé mi contraseña", ingresando el correo que le proporcionaste al administrador.</p>
+          <p style="margin:0 0 12px 0;">Si tienes alguna duda, no dudes en contactarnos.</p>
+          <p style="margin:24px 0 0 0;">Saludos,<br>El equipo de soporte</p>
+        `,
+      })
 
       // Enviar las credenciales por correo electrónico al usuario
       await Mail.send((message) => {
@@ -112,7 +125,7 @@ export default class UsersController {
           .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
           .to(email)
           .subject('Credenciales de acceso a la plataforma')
-          .html(emailContent);
+          .html(html);
       });
 
       // Responder con el usuario creado (excluyendo la contraseña)
@@ -124,6 +137,7 @@ export default class UsersController {
         email: newUser.email,
         role: newUser.role,
         status: newUser.status,
+        notificar_reservas: newUser.notificarReservas,
       });
     } catch (error) {
       return response.status(400).json({ message: 'Error creating user', error });
@@ -146,14 +160,15 @@ export default class UsersController {
         return response.status(404).json({ message: 'User not found' });
       }
 
-      const { first_name, last_name, username, email, password, role, status } = request.only([
+      const { first_name, last_name, username, email, password, role, status, notificar_reservas } = request.only([
         'first_name',
         'last_name',
         'username',
         'email',
         'password',
         'role',
-        'status'
+        'status',
+        'notificar_reservas',
       ]);
 
       if (first_name) foundUser.firstName = first_name;
@@ -163,6 +178,7 @@ export default class UsersController {
       if (password) foundUser.password = await Hash.make(password);
       if (role) foundUser.role = role;
       if (status) foundUser.status = status;
+      if (notificar_reservas !== undefined) foundUser.notificarReservas = !!notificar_reservas;
 
       await foundUser.save();
       return response.json(foundUser);
@@ -218,20 +234,28 @@ export default class UsersController {
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`
     console.log(resetLink)
 
+    const html = await renderEmailTemplate({
+      title: 'Reseteo de contraseña',
+      preheader: 'Solicitud para restablecer tu contraseña.',
+      bodyHtml: `
+        <h2 style="margin:0 0 12px 0; font-size:19px;">Solicitud de reseteo de contraseña</h2>
+        <p style="margin:0 0 12px 0;">Hola ${user.firstName},</p>
+        <p style="margin:0 0 20px 0;">Recibimos una solicitud para restablecer tu contraseña. Haz clic en el botón a continuación para restablecerla:</p>
+        <p style="margin:0 0 20px 0; text-align:center;">
+          <a href="${resetLink}" style="display:inline-block; background-color:#111827; color:#ffffff; text-decoration:none; padding:11px 22px; border-radius:8px; font-size:14px; font-weight:600;">Resetear mi contraseña</a>
+        </p>
+        <p style="margin:0 0 12px 0; font-size:13px; color:#8a8f98;">Si no solicitaste este reseteo, puedes ignorar este correo.</p>
+        <p style="margin:24px 0 0 0;">Saludos,<br>El equipo de soporte</p>
+      `,
+    })
+
     // Enviar correo electrónico con el enlace de reseteo de contraseña
     await Mail.send((message) => {
       message
         .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
         .to(email)
         .subject('Solicitud de Reseteo de Contraseña')
-        .html(`
-          <h1>Solicitud de Reseteo de Contraseña</h1>
-          <p>Hola ${user.firstName},</p>
-          <p>Recibimos una solicitud para restablecer tu contraseña. Haz clic en el enlace a continuación para restablecerla:</p>
-          <p><a href="${resetLink}">Resetear mi contraseña</a></p>
-          <p>Si no solicitaste este reseteo, puedes ignorar este correo.</p>
-          <p>Saludos,<br>El equipo de soporte</p>
-        `)
+        .html(html)
     })
 
     return response.json({ message: 'Password reset link sent' })

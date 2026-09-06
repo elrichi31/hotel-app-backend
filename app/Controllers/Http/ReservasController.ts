@@ -7,6 +7,8 @@ import Venta from 'App/Models/Venta'
 import VentaHabitacionPrecio from 'App/Models/VentaHabitacionPrecio'
 import Mail from '@ioc:Adonis/Addons/Mail'
 import { habitacionDisponible } from 'App/Helpers/Disponibilidad'
+import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
+import User from 'App/Models/User'
 
 /** `reserva.fecha_inicio`/`fecha_fin` llegan como Date o string desde la BD; las columnas dateTime de Venta/Habitacion exigen un luxon.DateTime. */
 function toDateTime(value: Date | string | DateTime): DateTime {
@@ -111,37 +113,140 @@ export default class ReservasController {
         })
       }
 
-      // Contenido del correo electrónico
-      const emailContent = `
-        <h1>Confirmación de Reserva</h1>
-        <p>Estimado/a ${nombre} ${apellido},</p>
-        <p>Gracias por realizar tu reserva en nuestra plataforma. Por favor, confirma tu reserva usando el enlace a continuación:</p>
-        <p><a href="${process.env.FRONTEND_URL}/reservar/confirm-reserva/${reserva.id}">Confirmar Reserva</a></p>
-        <p>Detalles de tu reserva:</p>
-        <ul>
-          <li><strong>Fecha de inicio:</strong> ${fecha_inicio}</li>
-          <li><strong>Fecha de fin:</strong> ${fecha_fin}</li>
-          <li><strong>Número de personas:</strong> ${numero_personas}</li>
-          <li><strong>Total:</strong> ${total}</li>
-        </ul>
-        <p>Tu reserva queda pendiente de aprobación por parte del hotel. Te avisaremos por este medio cuando quede confirmada.</p>
-        <p>Si tienes alguna duda, no dudes en contactarnos.</p>
-        <p>Saludos,<br>El equipo del hotel</p>
-      `;
+      // Contenido del correo electrónico para el cliente
+      const clienteHtml = await renderEmailTemplate({
+        title: 'Confirmación de reserva',
+        preheader: 'Tu reserva quedó registrada y está pendiente de aprobación.',
+        bodyHtml: `
+          <h2 style="margin:0 0 12px 0; font-size:19px;">¡Gracias por tu reserva!</h2>
+          <p style="margin:0 0 12px 0;">Estimado/a ${nombre} ${apellido},</p>
+          <p style="margin:0 0 20px 0;">Gracias por realizar tu reserva en nuestra plataforma. Por favor, confirma tu reserva usando el botón a continuación:</p>
+          <p style="margin:0 0 20px 0; text-align:center;">
+            <a href="${process.env.FRONTEND_URL}/reservar/confirm-reserva/${reserva.id}" style="display:inline-block; background-color:#111827; color:#ffffff; text-decoration:none; padding:11px 22px; border-radius:8px; font-size:14px; font-weight:600;">Confirmar reserva</a>
+          </p>
+          <p style="margin:0 0 8px 0; font-weight:600;">Detalles de tu reserva</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Fecha de inicio</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${fecha_inicio}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Fecha de fin</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${fecha_fin}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Número de personas</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${numero_personas}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0 0 0; font-size:14.5px; color:#1f2328; font-weight:700;">Total</td>
+              <td style="padding:10px 0 0 0; font-size:14.5px; font-weight:700; text-align:right;">$${total}</td>
+            </tr>
+          </table>
+          <p style="margin:20px 0 12px 0;">Tu reserva queda pendiente de aprobación por parte del hotel. Te avisaremos por este medio cuando quede confirmada.</p>
+          <p style="margin:0 0 12px 0;">Si tienes alguna duda, no dudes en contactarnos.</p>
+          <p style="margin:24px 0 0 0;">Saludos,<br>El equipo del hotel</p>
+        `,
+      })
 
-      // Enviar el correo electrónico
+      // Enviar el correo electrónico al cliente
       await Mail.send((message) => {
         message
           .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
           .to(email) // Correo del cliente
           .subject('Confirmación de tu reserva')
-          .html(emailContent)
+          .html(clienteHtml)
       })
+
+      // Notificar por correo a los usuarios internos configurados para recibir avisos de nuevas reservas
+      await this.notificarNuevaReserva(reserva, { nombre, apellido, email, telefono, fecha_inicio, fecha_fin, numero_personas, total })
 
       return response.status(201).json(reserva)
     } catch (error) {
       console.error('Error creating reserva:', error)
       return response.status(400).json({ message: 'Error creating reserva', error })
+    }
+  }
+
+  // Avisa por correo a los usuarios internos marcados con `notificarReservas`. Se ejecuta en su
+  // propio try/catch para que un fallo de correo (o que no haya destinatarios) nunca tumbe la
+  // creación de la reserva, que ya quedó guardada en la BD.
+  private async notificarNuevaReserva(
+    reserva: Reserva,
+    datos: {
+      nombre: string
+      apellido: string
+      email: string
+      telefono: string
+      fecha_inicio: string
+      fecha_fin: string
+      numero_personas: number
+      total: number
+    }
+  ) {
+    try {
+      const destinatarios = await User.query()
+        .where('notificarReservas', true)
+        .where('status', 'activo')
+
+      if (destinatarios.length === 0) return
+
+      const html = await renderEmailTemplate({
+        title: 'Nueva reserva',
+        preheader: `Nueva reserva de ${datos.nombre} ${datos.apellido}`,
+        bodyHtml: `
+          <h2 style="margin:0 0 12px 0; font-size:19px;">Se registró una nueva reserva</h2>
+          <p style="margin:0 0 16px 0;">Un cliente acaba de generar una reserva pendiente de aprobación.</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Cliente</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${datos.nombre} ${datos.apellido}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Correo</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${datos.email}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Teléfono</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${datos.telefono}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Fecha de inicio</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${datos.fecha_inicio}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Fecha de fin</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${datos.fecha_fin}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Número de personas</td>
+              <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${datos.numero_personas}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0 0 0; font-size:14.5px; color:#1f2328; font-weight:700;">Total</td>
+              <td style="padding:10px 0 0 0; font-size:14.5px; font-weight:700; text-align:right;">$${datos.total}</td>
+            </tr>
+          </table>
+          <p style="margin:20px 0 20px 0; text-align:center;">
+            <a href="${process.env.FRONTEND_URL}/reservas" style="display:inline-block; background-color:#111827; color:#ffffff; text-decoration:none; padding:11px 22px; border-radius:8px; font-size:14px; font-weight:600;">Ver reserva en el panel</a>
+          </p>
+          <p style="margin:0;">Recibes este correo porque tu cuenta está configurada para recibir avisos de nuevas reservas.</p>
+        `,
+      })
+
+      await Promise.all(
+        destinatarios.map((destinatario) =>
+          Mail.send((message) => {
+            message
+              .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
+              .to(destinatario.email)
+              .subject(`Nueva reserva #${reserva.id} — ${datos.nombre} ${datos.apellido}`)
+              .html(html)
+          })
+        )
+      )
+    } catch (error) {
+      console.error('Error notifying admins of new reserva:', error)
     }
   }
 

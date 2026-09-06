@@ -2,6 +2,7 @@ import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Factura from 'App/Models/Factura'
 import Producto from 'App/Models/Producto'
 import Mail from '@ioc:Adonis/Addons/Mail'
+import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 
 export default class FacturasController {
   public async index({ response }: HttpContextContract) {
@@ -119,20 +120,39 @@ export default class FacturasController {
   }
 
   private async sendFacturaEmail(factura: Factura) {
-    const emailContent = `
-      <h1>Factura Emitida</h1>
-      <p>Estimado/a ${factura.nombre} ${factura.apellido},</p>
-      <p>Le informamos que su factura ha sido emitida exitosamente. A continuación, algunos detalles de su factura:</p>
-      <ul>
-        <li><strong>Fecha de Emisión:</strong> ${factura.fecha_emision}</li>
-        <li><strong>Subtotal:</strong> $${factura.subtotal.toFixed(2)}</li>
-        <li><strong>Descuento:</strong> $${factura.descuento.toFixed(2)}</li>
-        <li><strong>Total:</strong> $${factura.total.toFixed(2)}</li>
-        <li><strong>Forma de Pago:</strong> ${factura.forma_pago}</li>
-      </ul>
-      <p>Si tiene alguna pregunta, no dude en contactarnos.</p>
-      <p>Saludos,<br>El equipo de HotelApp</p>
-    `
+    const html = await renderEmailTemplate({
+      title: 'Factura emitida',
+      preheader: 'Tu factura ha sido emitida exitosamente.',
+      bodyHtml: `
+        <h2 style="margin:0 0 12px 0; font-size:19px;">Factura emitida</h2>
+        <p style="margin:0 0 12px 0;">Estimado/a ${factura.nombre} ${factura.apellido},</p>
+        <p style="margin:0 0 16px 0;">Le informamos que su factura ha sido emitida exitosamente. A continuación, algunos detalles de su factura:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Fecha de emisión</td>
+            <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${factura.fecha_emision}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Subtotal</td>
+            <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">$${factura.subtotal.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Descuento</td>
+            <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">$${factura.descuento.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0; font-size:13.5px; color:#5c6169; border-bottom:1px solid #edeef0;">Forma de pago</td>
+            <td style="padding:8px 0; font-size:13.5px; font-weight:600; text-align:right; border-bottom:1px solid #edeef0;">${factura.forma_pago}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0 0 0; font-size:14.5px; color:#1f2328; font-weight:700;">Total</td>
+            <td style="padding:10px 0 0 0; font-size:14.5px; font-weight:700; text-align:right;">$${factura.total.toFixed(2)}</td>
+          </tr>
+        </table>
+        <p style="margin:20px 0 12px 0;">Si tiene alguna pregunta, no dude en contactarnos.</p>
+        <p style="margin:24px 0 0 0;">Saludos,<br>El equipo de HotelApp</p>
+      `,
+    })
 
     try {
       await Mail.send((message) => {
@@ -140,7 +160,7 @@ export default class FacturasController {
           .from(`noreply@${process.env.MAILGUN_DOMAIN}`)
           .to(factura.correo)
           .subject('Factura Emitida')
-          .html(emailContent)
+          .html(html)
       })
     } catch (error) {
       console.error('Error sending email:', error)

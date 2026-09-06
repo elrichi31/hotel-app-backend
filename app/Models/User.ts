@@ -27,6 +27,9 @@ export default class User extends BaseModel {
   @column()
   public status: string; // Campo de estado (activo o inactivo)
 
+  @column()
+  public notificarReservas: boolean; // Si recibe correo cuando se crea una nueva reserva
+
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
 
