@@ -9,6 +9,7 @@ import Mail from '@ioc:Adonis/Addons/Mail'
 import { habitacionDisponible } from 'App/Helpers/Disponibilidad'
 import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 import User from 'App/Models/User'
+import Configuracion from 'App/Models/Configuracion'
 
 /** `reserva.fecha_inicio`/`fecha_fin` llegan como Date o string desde la BD; las columnas dateTime de Venta/Habitacion exigen un luxon.DateTime. */
 function toDateTime(value: Date | string | DateTime): DateTime {
@@ -77,6 +78,11 @@ export default class ReservasController {
     ])
 
     try {
+      const configuracion = await Configuracion.actual()
+      if (!configuracion.reservasNativasActivas) {
+        return response.status(403).json({ message: 'El canal de reservas nativas está desactivado' })
+      }
+
       // Verificar disponibilidad antes de crear nada
       for (const habitacionId of habitaciones) {
         const disponible = await habitacionDisponible(habitacionId, fecha_inicio, fecha_fin)

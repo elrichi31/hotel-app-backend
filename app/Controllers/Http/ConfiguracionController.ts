@@ -22,12 +22,22 @@ export default class ConfiguracionController {
   }
 
   public async update({ request, response }: HttpContextContract) {
-    const { nombre_hotel, porcentaje_iva, direccion, telefono, correo } = request.only([
+    const {
+      nombre_hotel,
+      porcentaje_iva,
+      direccion,
+      telefono,
+      correo,
+      reservas_nativas_activas,
+      reservas_libres_activas,
+    } = request.only([
       'nombre_hotel',
       'porcentaje_iva',
       'direccion',
       'telefono',
       'correo',
+      'reservas_nativas_activas',
+      'reservas_libres_activas',
     ])
 
     try {
@@ -37,6 +47,12 @@ export default class ConfiguracionController {
       if (direccion !== undefined) configuracion.direccion = direccion
       if (telefono !== undefined) configuracion.telefono = telefono
       if (correo !== undefined) configuracion.correo = correo
+      if (reservas_nativas_activas !== undefined) {
+        configuracion.reservasNativasActivas = [true, 'true', '1', 1].includes(reservas_nativas_activas)
+      }
+      if (reservas_libres_activas !== undefined) {
+        configuracion.reservasLibresActivas = [true, 'true', '1', 1].includes(reservas_libres_activas)
+      }
 
       if (porcentaje_iva !== undefined) {
         const valor = Number(porcentaje_iva)
@@ -76,6 +92,32 @@ export default class ConfiguracionController {
     } catch (error) {
       console.error('Error updating configuracion:', error)
       return response.status(400).json({ message: 'Error updating configuracion', error })
+    }
+  }
+
+  // Solo admin: revela la api key vigente de reservas libres (se genera de una vez si no existía)
+  public async showApiKey({ response }: HttpContextContract) {
+    try {
+      const configuracion = await Configuracion.actual()
+      const apiKey = await configuracion.asegurarApiKey()
+      return response.json({ reservas_libres_api_key: apiKey })
+    } catch (error) {
+      console.error('Error fetching reservas libres api key:', error)
+      return response.status(500).json({ message: 'Error fetching api key', error })
+    }
+  }
+
+  // Solo admin: invalida la key anterior y genera una nueva. Cualquier integración externa
+  // que use la key vieja empieza a recibir 401 hasta que se actualice con la nueva.
+  public async regenerarApiKey({ response }: HttpContextContract) {
+    try {
+      const configuracion = await Configuracion.actual()
+      configuracion.reservasLibresApiKey = Configuracion.generarApiKey()
+      await configuracion.save()
+      return response.json({ reservas_libres_api_key: configuracion.reservasLibresApiKey })
+    } catch (error) {
+      console.error('Error regenerating reservas libres api key:', error)
+      return response.status(500).json({ message: 'Error regenerating api key', error })
     }
   }
 }

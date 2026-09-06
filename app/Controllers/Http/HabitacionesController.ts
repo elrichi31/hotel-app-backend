@@ -16,8 +16,39 @@ export default class HabitacionController {
     const habitacionData = request.body()
 
     try {
-      const { numero, tipo, estado, descripcion, numero_camas, fechaInicioOcupacion, fechaFinOcupacion, precios } = habitacionData
-      const data = { numero, tipo, estado, descripcion, numeroCamas: numero_camas, fechaInicioOcupacion, fechaFinOcupacion }
+      const {
+        numero,
+        tipo,
+        estado,
+        descripcion,
+        numero_camas,
+        capacidad,
+        wifi,
+        tipo_cama,
+        tv_cable,
+        mesa_trabajo,
+        bano_privado,
+        amenidades,
+        fechaInicioOcupacion,
+        fechaFinOcupacion,
+        precios,
+      } = habitacionData
+      const data = {
+        numero,
+        tipo,
+        estado,
+        descripcion,
+        numeroCamas: numero_camas,
+        capacidad,
+        wifi,
+        tipoCama: tipo_cama,
+        tvCable: tv_cable,
+        mesaTrabajo: mesa_trabajo,
+        banoPrivado: bano_privado,
+        amenidades,
+        fechaInicioOcupacion,
+        fechaFinOcupacion,
+      }
 
       // Verificar si el número de habitación ya existe
       const existingHabitacion = await Habitacion.findBy('numero', numero)
@@ -52,14 +83,37 @@ export default class HabitacionController {
   }
 
   public async update({ params, request, response }: HttpContextContract) {
-    const data = request.only(['numero', 'tipo', 'estado', 'descripcion', 'numero_camas', 'fechaInicioOcupacion', 'fechaFinOcupacion', 'precios'])
+    const data = request.only([
+      'numero',
+      'tipo',
+      'estado',
+      'descripcion',
+      'numero_camas',
+      'capacidad',
+      'wifi',
+      'tipo_cama',
+      'tv_cable',
+      'mesa_trabajo',
+      'bano_privado',
+      'amenidades',
+      'fechaInicioOcupacion',
+      'fechaFinOcupacion',
+      'precios',
+    ])
 
     try {
       const habitacion = await Habitacion.findOrFail(params.id)
       const precios = data.precios
       delete data.precios
 
-      habitacion.merge({ ...data, numeroCamas: data.numero_camas })
+      habitacion.merge({
+        ...data,
+        numeroCamas: data.numero_camas,
+        tipoCama: data.tipo_cama,
+        tvCable: data.tv_cable,
+        mesaTrabajo: data.mesa_trabajo,
+        banoPrivado: data.bano_privado,
+      })
       await habitacion.save()
 
       if (precios && Array.isArray(precios)) {

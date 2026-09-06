@@ -63,6 +63,8 @@ Route.get('/dashboard/stats', 'DashboardController.stats').middleware('auth')
 
 Route.get('/configuracion', 'ConfiguracionController.show').middleware('auth')
 Route.put('/configuracion', 'ConfiguracionController.update').middleware(['auth', 'role:admin'])
+Route.get('/configuracion/reservas-libres-api-key', 'ConfiguracionController.showApiKey').middleware(['auth', 'role:admin'])
+Route.post('/configuracion/reservas-libres-api-key/regenerar', 'ConfiguracionController.regenerarApiKey').middleware(['auth', 'role:admin'])
 
 Route.group(() => {
   Route.get('personas', 'RegistroPersonasController.index')
@@ -103,3 +105,17 @@ Route.group(() => {
   Route.post('/reservas/:id/aprobar', 'ReservasController.aprobar').middleware('auth') // Admin aprueba y genera la venta
   Route.post('/reservas/:id/rechazar', 'ReservasController.rechazar').middleware('auth') // Admin rechaza
 })
+
+// Reservas libres: registros que vienen de un catálogo externo, sin habitación real asociada.
+// Nunca ocupan una habitación ni generan una Venta automáticamente.
+Route.group(() => {
+  Route.get('/reservas-libres', 'ReservasLibresController.index')
+  Route.get('/reservas-libres/:id', 'ReservasLibresController.show')
+  Route.put('/reservas-libres/:id', 'ReservasLibresController.update')
+  Route.delete('/reservas-libres/:id', 'ReservasLibresController.destroy')
+  Route.post('/reservas-libres/:id/validar', 'ReservasLibresController.validar')
+  Route.post('/reservas-libres/:id/descartar', 'ReservasLibresController.descartar')
+}).middleware('auth')
+
+// Ingesta pública desde la página externa: autenticada por API key, no por login de usuario.
+Route.post('/reservas-libres/ingest', 'ReservasLibresController.ingest').middleware('apikey')

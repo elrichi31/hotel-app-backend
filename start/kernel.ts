@@ -43,4 +43,5 @@ Server.middleware.registerNamed({
   auth: () => import('App/Middleware/AuthMiddleware'),
   role: 'App/Middleware/RoleMiddleware',
   status: 'App/Middleware/StatusMiddleware',
+  apikey: () => import('App/Middleware/ApiKeyMiddleware'),
 })

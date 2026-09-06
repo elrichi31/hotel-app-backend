@@ -23,6 +23,33 @@ export default class Habitacion extends BaseModel {
   @column()
   public numeroCamas: number
 
+  @column()
+  public capacidad: number
+
+  @column()
+  public wifi: boolean
+
+  @column()
+  public tipoCama: string
+
+  @column()
+  public tvCable: boolean
+
+  @column()
+  public mesaTrabajo: boolean
+
+  @column()
+  public banoPrivado: boolean
+
+  @column({
+    prepare: (value: string[] | null) => (value ? JSON.stringify(value) : null),
+    consume: (value: string | string[] | null) => {
+      if (!value) return []
+      return typeof value === 'string' ? JSON.parse(value) : value
+    },
+  })
+  public amenidades: string[]
+
   @column.dateTime()
   public fechaInicioOcupacion: DateTime | null
 
