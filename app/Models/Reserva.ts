@@ -1,7 +1,8 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, manyToMany, ManyToMany } from '@ioc:Adonis/Lucid/Orm'
+import { BaseModel, column, manyToMany, ManyToMany, belongsTo, BelongsTo } from '@ioc:Adonis/Lucid/Orm'
 import Habitacion from 'App/Models/Habitacion'
 import Precio from 'App/Models/Precio'
+import Venta from 'App/Models/Venta'
 export default class Reserva extends BaseModel {
   @column({ isPrimary: true })
   public id: number
@@ -16,6 +17,9 @@ export default class Reserva extends BaseModel {
   public email: string
 
   @column()
+  public telefono: string
+
+  @column()
   public fecha_inicio: Date
 
   @column()
@@ -25,10 +29,16 @@ export default class Reserva extends BaseModel {
   public numero_personas: number
 
   @column()
-  public estado: 'pendiente' | 'confirmado' | 'cancelada'
+  public estado: 'pendiente' | 'confirmado' | 'aprobada' | 'cancelada'
 
   @column()
   public total: number
+
+  @column()
+  public ventaId: number | null
+
+  @belongsTo(() => Venta)
+  public venta: BelongsTo<typeof Venta>
 
   @manyToMany(() => Habitacion, {
     pivotTable: 'reserva_habitacion_precios',

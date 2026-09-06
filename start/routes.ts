@@ -59,6 +59,11 @@ Route.group(() => {
   Route.delete('/habitaciones/:id', 'HabitacionesController.destroy')
 }).middleware('auth')
 
+Route.get('/dashboard/stats', 'DashboardController.stats').middleware('auth')
+
+Route.get('/configuracion', 'ConfiguracionController.show').middleware('auth')
+Route.put('/configuracion', 'ConfiguracionController.update').middleware(['auth', 'role:admin'])
+
 Route.group(() => {
   Route.get('personas', 'RegistroPersonasController.index')
   Route.post('personas', 'RegistroPersonasController.store')
@@ -74,6 +79,8 @@ Route.group(() => {
   Route.get('ventas/:id', 'VentaController.show')
   Route.put('ventas/:id', 'VentaController.update')
   Route.delete('ventas/:id', 'VentaController.destroy')
+  Route.post('ventas/:id/check-in', 'VentaController.checkIn')
+  Route.post('ventas/:id/check-out', 'VentaController.checkOut')
 }).middleware('auth')
 
 Route.group(() => {
@@ -93,4 +100,6 @@ Route.group(() => {
   Route.delete('/reservas/:id', 'ReservasController.destroy').middleware('auth')    // Eliminar una reserva
   Route.post('/reservas/disponible', 'ReservasController.availableRooms')
   Route.get('/confirm-reserva/:id', 'ReservasController.confirmReserva') // Confirmar reserva
+  Route.post('/reservas/:id/aprobar', 'ReservasController.aprobar').middleware('auth') // Admin aprueba y genera la venta
+  Route.post('/reservas/:id/rechazar', 'ReservasController.rechazar').middleware('auth') // Admin rechaza
 })
