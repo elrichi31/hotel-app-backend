@@ -1,6 +1,6 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
+import { schema, rules } from '@ioc:Adonis/Core/Validator';
 import User from 'App/Models/User';
-import Hash from '@ioc:Adonis/Core/Hash';
 import PasswordReset from 'App/Models/PasswordReset';
 import { DateTime } from 'luxon';
 import Mail from '@ioc:Adonis/Addons/Mail'
@@ -68,15 +68,25 @@ export default class UsersController {
       }
 
       // Obtención de los datos del nuevo usuario
-      const { first_name, last_name, username, email, role, status, notificar_reservas } = request.only([
-        'first_name',
-        'last_name',
-        'username',
-        'email',
-        'role',
-        'status',
-        'notificar_reservas',
-      ]);
+      const createSchema = schema.create({
+        first_name: schema.string({ trim: true }, [rules.maxLength(80)]),
+        last_name: schema.string({ trim: true }, [rules.maxLength(80)]),
+        username: schema.string({ trim: true }, [
+          rules.maxLength(80),
+          rules.unique({ table: 'users', column: 'username' }),
+        ]),
+        email: schema.string({ trim: true }, [
+          rules.email(),
+          rules.maxLength(255),
+          rules.unique({ table: 'users', column: 'email' }),
+        ]),
+        role: schema.enum(['admin', 'empleado'] as const),
+        status: schema.enum(['activo', 'inactivo'] as const),
+        notificar_reservas: schema.boolean.optional(),
+      });
+      const { first_name, last_name, username, email, role, status, notificar_reservas } = await request.validate({
+        schema: createSchema,
+      });
 
       // Generar una contraseña temporal
       const temporaryPassword = uuidv4().slice(0, 8); // Generar una contraseña temporal de 8 caracteres
@@ -160,22 +170,34 @@ export default class UsersController {
         return response.status(404).json({ message: 'User not found' });
       }
 
-      const { first_name, last_name, username, email, password, role, status, notificar_reservas } = request.only([
-        'first_name',
-        'last_name',
-        'username',
-        'email',
-        'password',
-        'role',
-        'status',
-        'notificar_reservas',
-      ]);
+      const updateSchema = schema.create({
+        first_name: schema.string.optional({ trim: true }, [rules.maxLength(80)]),
+        last_name: schema.string.optional({ trim: true }, [rules.maxLength(80)]),
+        username: schema.string.optional({ trim: true }, [
+          rules.maxLength(80),
+          rules.unique({ table: 'users', column: 'username', whereNot: { id: foundUser.id } }),
+        ]),
+        email: schema.string.optional({ trim: true }, [
+          rules.email(),
+          rules.maxLength(255),
+          rules.unique({ table: 'users', column: 'email', whereNot: { id: foundUser.id } }),
+        ]),
+        password: schema.string.optional({}, [rules.minLength(8), rules.maxLength(180)]),
+        role: schema.enum.optional(['admin', 'empleado'] as const),
+        status: schema.enum.optional(['activo', 'inactivo'] as const),
+        notificar_reservas: schema.boolean.optional(),
+      });
+      const { first_name, last_name, username, email, password, role, status, notificar_reservas } =
+        await request.validate({ schema: updateSchema });
 
       if (first_name) foundUser.firstName = first_name;
       if (last_name) foundUser.lastName = last_name;
       if (username) foundUser.username = username;
       if (email) foundUser.email = email;
-      if (password) foundUser.password = await Hash.make(password);
+      // No se hashea aquí: el hook `beforeSave` del modelo User ya hashea cualquier
+      // password "dirty" — hacerlo también acá lo hasheaba dos veces y el usuario
+      // quedaba sin poder loguearse con la contraseña nueva.
+      if (password) foundUser.password = password;
       if (role) foundUser.role = role;
       if (status) foundUser.status = status;
       if (notificar_reservas !== undefined) foundUser.notificarReservas = !!notificar_reservas;
@@ -263,7 +285,11 @@ export default class UsersController {
 
   // Método para reseteo de contraseña
   public async resetPassword({ request, response }: HttpContextContract) {
-    const { token, new_password } = request.only(['token', 'new_password'])
+    const resetSchema = schema.create({
+      token: schema.string(),
+      new_password: schema.string({}, [rules.minLength(8), rules.maxLength(180)]),
+    })
+    const { token, new_password } = await request.validate({ schema: resetSchema })
 
     const passwordReset = await PasswordReset.query().where('token', token).where('expires_at', '>', DateTime.now().toJSDate()).first()
 

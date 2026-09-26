@@ -1,4 +1,5 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
+import { schema, rules } from '@ioc:Adonis/Core/Validator'
 import User from 'App/Models/User'
 import Hash from '@ioc:Adonis/Core/Hash'
 import Mail from '@ioc:Adonis/Addons/Mail'
@@ -6,23 +7,37 @@ import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 
 export default class AuthController {
   public async register ({ request, response }: HttpContextContract) {
-    const firstName = request.input('first_name')
-    const lastName = request.input('last_name')
-    const username = request.input('username')
-    const email = request.input('email')
-    const password = request.input('password')
-    const role = request.input('role')
-    const status = request.input('status')
+    const registerSchema = schema.create({
+      first_name: schema.string({ trim: true }, [rules.maxLength(80)]),
+      last_name: schema.string({ trim: true }, [rules.maxLength(80)]),
+      username: schema.string({ trim: true }, [
+        rules.maxLength(80),
+        rules.unique({ table: 'users', column: 'username' }),
+      ]),
+      email: schema.string({ trim: true }, [
+        rules.email(),
+        rules.maxLength(255),
+        rules.unique({ table: 'users', column: 'email' }),
+      ]),
+      password: schema.string({}, [rules.minLength(8), rules.maxLength(180)]),
+    })
 
+    const payload = await request.validate({ schema: registerSchema })
+
+    // El registro público nunca decide su propio rol/estado: se asigna el rol
+    // menos privilegiado y queda inactivo hasta que un admin lo active
+    // (evita que cualquiera se autoregistre como 'admin' mandando esos campos).
     const user = new User()
-    user.firstName = firstName
-    user.lastName = lastName
-    user.username = username
-    user.email = email
-    user.password = password
-    user.role = role
-    user.status = status
+    user.firstName = payload.first_name
+    user.lastName = payload.last_name
+    user.username = payload.username
+    user.email = payload.email
+    user.password = payload.password
+    user.role = 'empleado'
+    user.status = 'inactivo'
     await user.save()
+
+    const { email, firstName } = user
 
     const html = await renderEmailTemplate({
       title: 'Bienvenido',
@@ -46,9 +61,12 @@ export default class AuthController {
     return response.created({ user })
   }
 
-  public async login ({ request, auth, response }) {
-    const username = request.input('username')
-    const password = request.input('password')
+  public async login ({ request, auth, response }: HttpContextContract) {
+    const loginSchema = schema.create({
+      username: schema.string(),
+      password: schema.string(),
+    })
+    const { username, password } = await request.validate({ schema: loginSchema })
 
     const user = await User.query().where('username', username).first()
 

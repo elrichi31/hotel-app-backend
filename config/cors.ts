@@ -44,7 +44,15 @@ const corsConfig: CorsConfig = {
   |                     one of the above values.
   |
   */
-  origin: '*',
+  // 'origin: *' junto con 'credentials: true' obliga a los navegadores/servidores CORS a
+  // reflejar cualquier origen entrante, permitiendo que cualquier sitio haga requests
+  // autenticados contra esta API. Se restringe al frontend configurado.
+  // La ingesta de reservas libres se autentica con API key (no cookies) y la llama un sitio
+  // externo, así que esa ruta sí acepta cualquier origen.
+  origin: (_origin, ctx) =>
+    ctx.request.url() === '/reservas-libres/ingest'
+      ? true
+      : (process.env.FRONTEND_URL ?? '').split(',').map((o) => o.trim().replace(/\/$/, '')).filter(Boolean),
 
   /*
   |--------------------------------------------------------------------------

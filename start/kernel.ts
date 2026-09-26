@@ -44,4 +44,5 @@ Server.middleware.registerNamed({
   role: 'App/Middleware/RoleMiddleware',
   status: 'App/Middleware/StatusMiddleware',
   apikey: () => import('App/Middleware/ApiKeyMiddleware'),
+  throttle: () => import('App/Middleware/RateLimitMiddleware'),
 })
