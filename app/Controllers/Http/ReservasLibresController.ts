@@ -161,7 +161,7 @@ export default class ReservasLibresController {
         `,
       })
 
-      await Promise.all(
+      const envios = await Promise.allSettled(
         destinatarios.map((destinatario) =>
           Mail.send((message) => {
             message
@@ -172,6 +172,18 @@ export default class ReservasLibresController {
           })
         )
       )
+
+      // Solo se registran los envíos que salieron bien, para mostrarlos en el panel.
+      reserva.notificados = destinatarios
+        .filter((_, i) => envios[i].status === 'fulfilled')
+        .map((u) => ({ id: u.id, nombre: `${u.firstName} ${u.lastName}`.trim(), email: u.email }))
+      await reserva.save()
+
+      envios.forEach((envio, i) => {
+        if (envio.status === 'rejected') {
+          console.error(`Error sending reserva libre notice to ${destinatarios[i].email}:`, envio.reason)
+        }
+      })
     } catch (error) {
       console.error('Error notifying admins of new reserva libre:', error)
     }

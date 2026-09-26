@@ -49,6 +49,12 @@ export default class ReservaLibre extends BaseModel {
   @column()
   public estado: 'pendiente_revision' | 'validada' | 'descartada'
 
+  @column({
+    prepare: (value) => (value == null ? null : JSON.stringify(value)),
+    consume: (value) => (typeof value === 'string' ? JSON.parse(value) : value),
+  })
+  public notificados: { id: number; nombre: string; email: string }[] | null
+
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
 
