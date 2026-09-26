@@ -41,6 +41,10 @@ const databaseConfig: DatabaseConfig = {
         user: Env.get('MYSQL_USER'),
         password: Env.get('MYSQL_PASSWORD', ''),
         database: Env.get('MYSQL_DB_NAME'),
+        // Las columnas DATE son días de calendario: devolverlas como 'YYYY-MM-DD'. Si mysql2
+        // las convierte a Date (medianoche UTC del servidor), el navegador en Ecuador (UTC-5)
+        // las muestra un día antes.
+        dateStrings: ['DATE'],
       },
       migrations: {
         naturalSort: true,

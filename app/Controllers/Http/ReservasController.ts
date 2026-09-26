@@ -14,7 +14,9 @@ import Configuracion from 'App/Models/Configuracion'
 /** `reserva.fecha_inicio`/`fecha_fin` llegan como Date o string desde la BD; las columnas dateTime de Venta/Habitacion exigen un luxon.DateTime. */
 function toDateTime(value: Date | string | DateTime): DateTime {
   if (value instanceof DateTime) return value
-  return DateTime.fromJSDate(new Date(value))
+  // 'YYYY-MM-DD' → medianoche local (new Date() lo tomaría como UTC)
+  if (typeof value === 'string') return DateTime.fromISO(value)
+  return DateTime.fromJSDate(value)
 }
 
 export default class ReservasController {
