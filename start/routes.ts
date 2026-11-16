@@ -27,7 +27,6 @@ Route.get('/', async () => {
 Route.post('/password/forgot', 'UsersController.requestPasswordReset').middleware('throttle:5,60')
 Route.post('/password/reset', 'UsersController.resetPassword').middleware('throttle:10,60')
 
-Route.get('/posts', 'PostsController.index')
 Route.post('/register', 'AuthController.register').middleware('throttle:5,60')
 Route.post('/login', 'AuthController.login').middleware('throttle:10,60')
 Route.post('/logout', 'AuthController.logout').middleware('auth')
