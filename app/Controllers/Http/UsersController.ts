@@ -4,7 +4,7 @@ import User from 'App/Models/User';
 import PasswordReset from 'App/Models/PasswordReset';
 import { DateTime } from 'luxon';
 import Mail from '@ioc:Adonis/Addons/Mail'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID as uuidv4 } from 'crypto'
 import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 
 export default class UsersController {

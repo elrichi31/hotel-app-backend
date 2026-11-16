@@ -4,35 +4,40 @@
   "private": true,
   "scripts": {
     "dev": "node ace serve --watch & node ace scheduler:run",
-    "build": "node ace build --production & node ace scheduler:run & node ace db:seed",
+    "build": "node ace build --production",
     "start": "node server.js",
-    "test": "node ace test"
+    "test": "node ace test",
+    "scheduler": "node ace scheduler:run",
+    "seed": "node ace db:seed"
   },
   "devDependencies": {
     "@adonisjs/assembler": "^5.9.6",
     "@japa/preset-adonis": "^1.2.0",
     "@japa/runner": "^2.5.1",
+    "@types/node": "^24.19.2",
     "@types/proxy-addr": "^2.0.3",
     "@types/source-map-support": "^0.5.10",
     "adonis-preset-ts": "^2.1.0",
     "pino-pretty": "^11.2.1",
-    "typescript": "~4.6",
+    "typescript": "~5.9.3",
     "youch": "^3.3.3",
     "youch-terminal": "^2.2.3"
   },
   "dependencies": {
     "@adonisjs/auth": "^8.2.3",
     "@adonisjs/core": "^5.9.0",
-    "@adonisjs/lucid": "^18.4.0",
+    "@adonisjs/lucid": "^18.4.2",
     "@adonisjs/mail": "^8.2.1",
     "@adonisjs/repl": "^3.1.11",
     "@adonisjs/view": "^6.2.0",
     "adonis5-scheduler": "^2.1.1",
     "luxon": "^3.4.4",
-    "mysql2": "^3.10.0",
-    "proxy-addr": "^2.0.7",
+    "mysql2": "^3.24.6",
+    "proxy-addr": "^2.0.8",
     "reflect-metadata": "^0.2.2",
-    "source-map-support": "^0.5.21",
-    "uuid": "^10.0.0"
+    "source-map-support": "^0.5.21"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

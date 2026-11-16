@@ -1,5 +1,6 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Drive from '@ioc:Adonis/Core/Drive'
+import { randomUUID } from 'crypto'
 import Configuracion from 'App/Models/Configuracion'
 
 function conLogoUrl(configuracion: Configuracion) {
@@ -74,7 +75,7 @@ export default class ConfiguracionController {
           })
         }
 
-        const nombreArchivo = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${logo.extname}`
+        const nombreArchivo = `${randomUUID()}.${logo.extname}`
         await logo.moveToDisk('logos', { name: nombreArchivo }, 'local')
 
         // Borrar el logo anterior para no acumular archivos huérfanos
