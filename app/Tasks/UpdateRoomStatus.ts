@@ -12,19 +12,17 @@ export default class UpdateRoomStatus extends BaseTask {
 
   public async handle() {
     const now = DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss')
-    const habitaciones = await Habitacion.query()
+    // Update directo: no pasa por save(), así que updated_at se escribe a mano.
+    const [liberadas] = await Habitacion.query()
       .where('estado', 'Ocupado')
-      .where('fechaFinOcupacion', '<', now)
+      .where('fecha_fin_ocupacion', '<', now)
+      .update({
+        estado: 'Libre',
+        fecha_inicio_ocupacion: null,
+        fecha_fin_ocupacion: null,
+        updated_at: now,
+      })
 
-    for (const habitacion of habitaciones) {
-      console.log(`Updating room status for room ---------------> ${habitacion.numero} ---- ${habitacion.fechaFinOcupacion} -----> ${now}`)
-      habitacion.estado = 'Libre'
-      habitacion.fechaInicioOcupacion = null
-      habitacion.fechaFinOcupacion = null
-      await habitacion.save()
-    }
-
-    const updateTime = DateTime.now().toISO()
-    console.log(`Updated room status at ${updateTime}`)
+    console.log(`Updated room status at ${DateTime.now().toISO()}: ${liberadas} habitaciones liberadas`)
   }
 }

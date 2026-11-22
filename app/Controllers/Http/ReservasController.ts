@@ -6,7 +6,7 @@ import ReservaHabitacionPrecio from 'App/Models/ReservaHabitacionPrecio'
 import Venta from 'App/Models/Venta'
 import VentaHabitacionPrecio from 'App/Models/VentaHabitacionPrecio'
 import Mail from '@ioc:Adonis/Addons/Mail'
-import { habitacionDisponible } from 'App/Helpers/Disponibilidad'
+import { habitacionesOcupadas } from 'App/Helpers/Disponibilidad'
 import { renderEmailTemplate } from 'App/Helpers/EmailTemplate'
 import User from 'App/Models/User'
 import Configuracion from 'App/Models/Configuracion'
@@ -86,14 +86,13 @@ export default class ReservasController {
       }
 
       // Verificar disponibilidad antes de crear nada
-      for (const habitacionId of habitaciones) {
-        const disponible = await habitacionDisponible(habitacionId, fecha_inicio, fecha_fin)
-        if (!disponible) {
-          const habitacion = await Habitacion.find(habitacionId)
-          return response.status(409).json({
-            message: `La habitación ${habitacion?.numero ?? habitacionId} no está disponible para esas fechas`,
-          })
-        }
+      const ocupadas = await habitacionesOcupadas(habitaciones, fecha_inicio, fecha_fin)
+      const ocupadaId = habitaciones.find((id: number) => ocupadas.has(Number(id)))
+      if (ocupadaId !== undefined) {
+        const habitacion = await Habitacion.find(ocupadaId)
+        return response.status(409).json({
+          message: `La habitación ${habitacion?.numero ?? ocupadaId} no está disponible para esas fechas`,
+        })
       }
 
       // Crear la reserva (estado 'pendiente' por defecto)
@@ -292,16 +291,15 @@ export default class ReservasController {
       }
 
       // Verificar disponibilidad de las nuevas habitaciones (ignorando el hold de esta misma reserva)
-      for (const habitacionId of habitaciones) {
-        const disponible = await habitacionDisponible(habitacionId, fecha_inicio, fecha_fin, {
-          excludeReservaId: reserva.id,
+      const ocupadas = await habitacionesOcupadas(habitaciones, fecha_inicio, fecha_fin, {
+        excludeReservaId: reserva.id,
+      })
+      const ocupadaId = habitaciones.find((id: number) => ocupadas.has(Number(id)))
+      if (ocupadaId !== undefined) {
+        const habitacion = await Habitacion.find(ocupadaId)
+        return response.status(409).json({
+          message: `La habitación ${habitacion?.numero ?? ocupadaId} no está disponible para esas fechas`,
         })
-        if (!disponible) {
-          const habitacion = await Habitacion.find(habitacionId)
-          return response.status(409).json({
-            message: `La habitación ${habitacion?.numero ?? habitacionId} no está disponible para esas fechas`,
-          })
-        }
       }
 
       reserva.merge({
@@ -353,14 +351,13 @@ export default class ReservasController {
     try {
       const habitaciones = await Habitacion.query().preload('precios')
 
-      const disponibles = await Promise.all(
-        habitaciones.map(async (habitacion) => ({
-          habitacion,
-          disponible: await habitacionDisponible(habitacion.id, fecha_inicio, fecha_fin),
-        }))
+      const ocupadas = await habitacionesOcupadas(
+        habitaciones.map((h) => h.id),
+        fecha_inicio,
+        fecha_fin
       )
 
-      return response.json(disponibles.filter((h) => h.disponible).map((h) => h.habitacion))
+      return response.json(habitaciones.filter((h) => !ocupadas.has(h.id)))
     } catch (error) {
       console.error('Error fetching available rooms:', error)
       return response.status(500).json({ message: 'Error fetching available rooms', error })
@@ -406,16 +403,18 @@ export default class ReservasController {
       }
 
       // Revalidar disponibilidad: puede haber pasado tiempo desde que se creó la reserva
-      for (const row of pivotRows) {
-        const disponible = await habitacionDisponible(row.habitacionId, reserva.fecha_inicio, reserva.fecha_fin, {
-          excludeReservaId: reserva.id,
+      const ocupadas = await habitacionesOcupadas(
+        pivotRows.map((row) => row.habitacionId),
+        reserva.fecha_inicio,
+        reserva.fecha_fin,
+        { excludeReservaId: reserva.id }
+      )
+      const ocupada = pivotRows.find((row) => ocupadas.has(row.habitacionId))
+      if (ocupada) {
+        const habitacion = await Habitacion.find(ocupada.habitacionId)
+        return response.status(409).json({
+          message: `La habitación ${habitacion?.numero ?? ocupada.habitacionId} ya no está disponible para esas fechas`,
         })
-        if (!disponible) {
-          const habitacion = await Habitacion.find(row.habitacionId)
-          return response.status(409).json({
-            message: `La habitación ${habitacion?.numero ?? row.habitacionId} ya no está disponible para esas fechas`,
-          })
-        }
       }
 
       const usuario = await auth.authenticate()

@@ -5,7 +5,7 @@ import Venta from 'App/Models/Venta'
 import Habitacion from 'App/Models/Habitacion'
 import VentaHabitacionPrecio from 'App/Models/VentaHabitacionPrecio'
 import Factura from 'App/Models/Factura'
-import { habitacionDisponible } from 'App/Helpers/Disponibilidad'
+import { habitacionesOcupadas } from 'App/Helpers/Disponibilidad'
 import { calcularFacturaEstadia, calcularNoches, obtenerPorcentajeIva } from 'App/Helpers/Facturacion'
 
 export default class VentaController {
@@ -48,14 +48,13 @@ export default class VentaController {
     try {
       // Verificar disponibilidad antes de vender: evita el doble-booking entre el
       // mostrador y las reservas online (pendientes, confirmadas o aprobadas)
-      for (const habitacionId of habitaciones) {
-        const disponible = await habitacionDisponible(habitacionId, fecha_inicio, fecha_fin)
-        if (!disponible) {
-          const habitacion = await Habitacion.find(habitacionId)
-          return response.status(409).json({
-            message: `La habitación ${habitacion?.numero ?? habitacionId} no está disponible para esas fechas`,
-          })
-        }
+      const ocupadas = await habitacionesOcupadas(habitaciones, fecha_inicio, fecha_fin)
+      const ocupadaId = habitaciones.find((id: number) => ocupadas.has(Number(id)))
+      if (ocupadaId !== undefined) {
+        const habitacion = await Habitacion.find(ocupadaId)
+        return response.status(409).json({
+          message: `La habitación ${habitacion?.numero ?? ocupadaId} no está disponible para esas fechas`,
+        })
       }
 
       // Registra quién creó la venta, para poder mostrarlo luego en el listado
@@ -107,16 +106,15 @@ export default class VentaController {
       const venta = await Venta.findOrFail(params.id)
 
       // Verificar disponibilidad de las nuevas habitaciones (ignorando el hold de esta misma venta)
-      for (const habitacionId of habitaciones) {
-        const disponible = await habitacionDisponible(habitacionId, fecha_inicio, fecha_fin, {
-          excludeVentaId: venta.id,
+      const ocupadas = await habitacionesOcupadas(habitaciones, fecha_inicio, fecha_fin, {
+        excludeVentaId: venta.id,
+      })
+      const ocupadaId = habitaciones.find((id: number) => ocupadas.has(Number(id)))
+      if (ocupadaId !== undefined) {
+        const habitacion = await Habitacion.find(ocupadaId)
+        return response.status(409).json({
+          message: `La habitación ${habitacion?.numero ?? ocupadaId} no está disponible para esas fechas`,
         })
-        if (!disponible) {
-          const habitacion = await Habitacion.find(habitacionId)
-          return response.status(409).json({
-            message: `La habitación ${habitacion?.numero ?? habitacionId} no está disponible para esas fechas`,
-          })
-        }
       }
 
       // Actualizar la venta

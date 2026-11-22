@@ -23,10 +23,11 @@ export default class DashboardController {
 
       const [ventas, facturas, habitaciones, reservas, personas] = await Promise.all([
         Venta.query().preload('precios', (q) => q.preload('habitacion')),
-        Factura.query(),
-        Habitacion.query().preload('precios'),
-        Reserva.query(),
-        RegistroPersona.query(),
+        // Solo las columnas que se agregan abajo; habitaciones no necesita sus precios.
+        Factura.query().select('created_at', 'estado', 'total'),
+        Habitacion.query().select('estado'),
+        Reserva.query().select('created_at'),
+        RegistroPersona.query().select('created_at', 'procedencia'),
       ])
 
       /* --------------------------- Ingresos por día -------------------------- */
